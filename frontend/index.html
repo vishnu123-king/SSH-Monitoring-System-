@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SSH Security Monitor - NOC Dashboard</title>
+  <link rel="stylesheet" href="/css/dashboard.css" />
+</head>
+<body class="dark-theme">
+  <!-- Top Navigation Bar -->
+  <header class="top-nav">
+    <div class="brand">
+      <div class="logo-icon">🛡️</div>
+      <div class="brand-text">
+        <h1>SSH SECURITY MONITOR</h1>
+        <span class="sub-text">HOST: <span id="host-name">localhost</span> | LINUX JOURNALD ENGINE</span>
+      </div>
+    </div>
+    <div class="nav-controls">
+      <div class="status-indicator">
+        <span class="pulse-dot" id="ws-status-dot"></span>
+        <span id="ws-status-text">CONNECTING...</span>
+      </div>
+      <div class="auth-bar">
+        <span id="user-display" class="user-pill hidden"></span>
+        <button id="btn-login" class="btn btn-outline">Sign In</button>
+        <button id="btn-logout" class="btn btn-outline hidden">Logout</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="dashboard-container">
+    <!-- Stat Cards Overview -->
+    <section class="stats-grid">
+      <div class="card stat-card">
+        <div class="stat-title">TOTAL SSH EVENTS</div>
+        <div class="stat-value" id="stat-total-events">0</div>
+        <div class="stat-meta">Lifetime stored in SQLite</div>
+      </div>
+      <div class="card stat-card stat-danger">
+        <div class="stat-title">FAILED LOGINS</div>
+        <div class="stat-value" id="stat-failed-auths">0</div>
+        <div class="stat-meta">Auth failures & invalid users</div>
+      </div>
+      <div class="card stat-card stat-success">
+        <div class="stat-title">SUCCESSFUL LOGINS</div>
+        <div class="stat-value" id="stat-success-auths">0</div>
+        <div class="stat-meta">Password & Publickey accepted</div>
+      </div>
+      <div class="card stat-card stat-warning">
+        <div class="stat-title">ACTIVE ALERTS</div>
+        <div class="stat-value" id="stat-active-alerts">0</div>
+        <div class="stat-meta">Pending investigation</div>
+      </div>
+      <div class="card stat-card stat-info">
+        <div class="stat-title">UNIQUE SOURCE IPS</div>
+        <div class="stat-value" id="stat-unique-sources">0</div>
+        <div class="stat-meta">Tracked known sources</div>
+      </div>
+    </section>
+
+    <!-- Analytics Breakdown Row -->
+    <section class="analytics-row">
+      <!-- Top Attack Source IPs -->
+      <div class="card panel">
+        <div class="panel-header">
+          <h3>Top Source IPs</h3>
+          <span class="badge">Activity</span>
+        </div>
+        <div class="list-container" id="top-sources-list">
+          <div class="empty-state">No connection data yet</div>
+        </div>
+      </div>
+
+      <!-- Top Targeted Usernames -->
+      <div class="card panel">
+        <div class="panel-header">
+          <h3>Top Target Usernames</h3>
+          <span class="badge">Enumeration</span>
+        </div>
+        <div class="list-container" id="top-usernames-list">
+          <div class="empty-state">No targeted accounts yet</div>
+        </div>
+      </div>
+
+      <!-- Severity Distribution Breakdown -->
+      <div class="card panel">
+        <div class="panel-header">
+          <h3>Alert Severity Distribution</h3>
+          <span class="badge">Triage</span>
+        </div>
+        <div class="severity-bars" id="severity-distribution">
+          <div class="bar-row">
+            <span class="bar-label">CRITICAL</span>
+            <div class="bar-track"><div class="bar-fill bar-critical" id="bar-CRITICAL" style="width: 0%"></div></div>
+            <span class="bar-val" id="cnt-CRITICAL">0</span>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">HIGH</span>
+            <div class="bar-track"><div class="bar-fill bar-high" id="bar-HIGH" style="width: 0%"></div></div>
+            <span class="bar-val" id="cnt-HIGH">0</span>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">MEDIUM</span>
+            <div class="bar-track"><div class="bar-fill bar-medium" id="bar-MEDIUM" style="width: 0%"></div></div>
+            <span class="bar-val" id="cnt-MEDIUM">0</span>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">LOW / INFO</span>
+            <div class="bar-track"><div class="bar-fill bar-low" id="bar-LOW" style="width: 0%"></div></div>
+            <span class="bar-val" id="cnt-LOW">0</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Real-time Security Alerts Table -->
+    <section class="card panel alerts-panel">
+      <div class="panel-header">
+        <div class="title-with-badge">
+          <h2>Security Alerts</h2>
+          <span class="live-tag">LIVE STREAM</span>
+        </div>
+        <div class="panel-actions">
+          <select id="filter-alert-severity" class="form-select">
+            <option value="">All Severities</option>
+            <option value="CRITICAL">Critical</option>
+            <option value="HIGH">High</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="LOW">Low</option>
+            <option value="INFO">Info</option>
+          </select>
+          <select id="filter-alert-status" class="form-select">
+            <option value="">All Statuses</option>
+            <option value="active">Active Only</option>
+            <option value="acknowledged">Acknowledged</option>
+            <option value="resolved">Resolved</option>
+          </select>
+          <button id="btn-refresh-alerts" class="btn btn-sm">Refresh</button>
+        </div>
+      </div>
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Timestamp (UTC)</th>
+              <th>Rule ID</th>
+              <th>Alert Type</th>
+              <th>Severity</th>
+              <th>Source IP</th>
+              <th>Target User</th>
+              <th>Description</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="alerts-table-body">
+            <tr><td colspan="9" class="text-center">Loading security alerts...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Recent SSH Events Log Table -->
+    <section class="card panel events-panel">
+      <div class="panel-header">
+        <h2>Normalized SSH Authentication Events</h2>
+        <div class="panel-actions">
+          <input type="text" id="filter-event-ip" placeholder="Filter by IP..." class="form-input" />
+          <select id="filter-event-type" class="form-select">
+            <option value="">All Event Types</option>
+            <option value="AUTH_FAILURE">AUTH_FAILURE</option>
+            <option value="AUTH_SUCCESS_PASSWORD">AUTH_SUCCESS_PASSWORD</option>
+            <option value="AUTH_SUCCESS_PUBLICKEY">AUTH_SUCCESS_PUBLICKEY</option>
+            <option value="INVALID_USER">INVALID_USER</option>
+            <option value="SESSION_OPEN">SESSION_OPEN</option>
+            <option value="SESSION_CLOSE">SESSION_CLOSE</option>
+            <option value="DISCONNECT">DISCONNECT</option>
+          </select>
+          <button id="btn-refresh-events" class="btn btn-sm">Refresh</button>
+        </div>
+      </div>
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Timestamp (UTC)</th>
+              <th>Event Type</th>
+              <th>Username</th>
+              <th>Source IP</th>
+              <th>Port</th>
+              <th>Confidence</th>
+              <th>Raw Journal Message</th>
+            </tr>
+          </thead>
+          <tbody id="events-table-body">
+            <tr><td colspan="7" class="text-center">Loading SSH events...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Login Modal -->
+  <div id="modal-login" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Sign In to SSH Monitor</h3>
+        <button id="btn-close-modal" class="btn-close">&times;</button>
+      </div>
+      <form id="login-form">
+        <div class="form-group">
+          <label for="input-username">Username</label>
+          <input type="text" id="input-username" class="form-input" required autocomplete="username" />
+        </div>
+        <div class="form-group">
+          <label for="input-password">Password</label>
+          <input type="password" id="input-password" class="form-input" required autocomplete="current-password" />
+        </div>
+        <div id="login-error" class="error-text hidden"></div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Sign In</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>

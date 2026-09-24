@@ -1,0 +1,37 @@
+[Unit]
+Description=SSH Security Monitor Daemon & Web Dashboard
+Documentation=https://github.com/security/ssh-security-monitor
+After=network.target systemd-journald.service ssh.service sshd.service
+Wants=systemd-journald.service
+
+[Service]
+Type=simple
+User=sshmon
+Group=sshmon
+# Supplementary group required to read systemd journals without root privileges
+SupplementaryGroups=systemd-journal adm
+
+WorkingDirectory=/opt/ssh-security-monitor
+EnvironmentFile=-/etc/ssh-security-monitor/ssh-security-monitor.env
+
+ExecStart=/opt/ssh-security-monitor/.venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
+
+Restart=always
+RestartSec=5s
+KillMode=mixed
+TimeoutStopSec=15
+
+# Linux Systemd Security Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+ReadWritePaths=/opt/ssh-security-monitor/data /var/log/ssh-security-monitor /opt/ssh-security-monitor
+
+[Install]
+WantedBy=multi-user.target

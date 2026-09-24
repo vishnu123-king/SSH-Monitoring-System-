@@ -1,0 +1,6 @@
+{
+  "name": "Linux SSH Security Monitor",
+  "description": "Production-ready Linux SSH security monitoring application with journald event streaming, brute-force & anomalous authentication detection, REST API, WebSocket alerts, and real-time dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

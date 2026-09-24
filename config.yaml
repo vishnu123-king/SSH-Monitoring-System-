@@ -1,0 +1,76 @@
+# SSH Security Monitor Configuration
+server:
+  host: "127.0.0.1"
+  port: 8000
+  workers: 1
+  cors_origins:
+    - "http://127.0.0.1:8000"
+    - "http://localhost:8000"
+    - "http://127.0.0.1:3000"
+    - "http://localhost:3000"
+
+database:
+  url: "sqlite:///./data/ssh_monitor.db"
+  echo: false
+  busy_timeout_ms: 5000
+
+collector:
+  service_name: "auto" # "auto", "ssh", or "sshd"
+  poll_interval_seconds: 1.0
+  backoff_max_seconds: 30.0
+  initial_history_lines: 500
+  enable_journal: true
+  fallback_auth_log: "/var/log/auth.log"
+
+detection:
+  rules:
+    RULE-001:
+      name: "SSH brute-force candidate"
+      enabled: true
+      threshold: 5
+      window_seconds: 120
+      cooldown_seconds: 300
+      severity: "HIGH"
+    RULE-002:
+      name: "Multiple usernames from one source"
+      enabled: true
+      threshold_usernames: 3
+      window_seconds: 180
+      cooldown_seconds: 300
+      severity: "HIGH"
+    RULE-003:
+      name: "Successful authentication following repeated failures"
+      enabled: true
+      failure_threshold: 3
+      window_seconds: 300
+      cooldown_seconds: 600
+      severity: "CRITICAL"
+    RULE-004:
+      name: "Privileged root login"
+      enabled: true
+      cooldown_seconds: 60
+      severity: "MEDIUM"
+    RULE-005:
+      name: "New SSH source"
+      enabled: true
+      cooldown_seconds: 3600
+      severity: "INFO"
+    RULE-006:
+      name: "Authentication failure burst"
+      enabled: true
+      burst_threshold: 15
+      window_seconds: 60
+      cooldown_seconds: 300
+      severity: "CRITICAL"
+
+retention:
+  events_days: 30
+  alerts_days: 90
+  cleanup_interval_hours: 24
+
+security:
+  jwt_secret_key: "CHANGE_ME_ON_INSTALLATION_MIN_32_CHARACTERS"
+  jwt_algorithm: "HS256"
+  jwt_access_token_expire_minutes: 480
+  admin_username: "admin"
+  admin_default_password: "" # Set in .env or via CLI command: ssh-monitor create-user
